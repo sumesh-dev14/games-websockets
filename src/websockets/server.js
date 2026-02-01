@@ -1,4 +1,5 @@
 import { WebSocketServer, WebSocket } from "ws";
+import { webSocketArcjet } from "../arcjet.js";
 // Utility (helper) function to send JSON data over a WebSocket connection
 function sendJSON(ws, data) {
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
@@ -27,7 +28,24 @@ export function attachWebSocketServer(server) {
     console.error("WebSocket server error:", error);
   });
 
-  wss.on("connection", (socket, req) => {
+  wss.on("connection", async (socket, req) => {
+    if (webSocketArcjet) {
+      try {
+        const decision = await webSocketArcjet.protect(req);
+        if (decision.isDenied) {
+          const code = decision.reason.isRateLimit ? 1013 : 1008; // 1013: Try Again Later, 1008: Policy Violation
+          const reason = decision.reason.isRateLimit
+            ? "Rate limit exceeded"
+            : "Access denied";
+          socket.close(code, reason);
+          return;
+        }
+      } catch (error) {
+        console.error("WebSocket Arcjet error:", error);
+        socket.close(1011, "Internal server error"); // 1011: Internal Error
+        return;
+      }
+    }
     sendJSON(socket, {
       type: "welcome",
       message: "Welcome to the WebSocket server!",
