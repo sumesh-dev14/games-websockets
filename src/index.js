@@ -10,11 +10,12 @@ const app = express();
 const server = http.createServer(app);
 
 app.use(express.json()); // Middleware to parse JSON bodies
+app.use(securityMiddleware); // Apply security middleware globally
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
-app.use(securityMiddleware); // Apply security middleware globally
+
 app.use("/matches", matcheRoutes);
 
 // Attach WebSocket server to the existing HTTP server
