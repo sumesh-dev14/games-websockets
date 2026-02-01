@@ -1,15 +1,20 @@
 import arcjet, { shield, slidingWindow, detectBot } from "@arcjet/node";
+
+/**
+ * Arcjet Security Configuration (Optional)
+ *
+ * ARCJET_API_KEY and ARCJET_ENV are optional environment variables.
+ * If either is missing, Arcjet security features will be disabled.
+ * The httpArcjet, webSocketArcjet, and securityMiddleware exports
+ * include null guards to safely handle the optional nature of Arcjet.
+ *
+ * To enable Arcjet, set both environment variables:
+ * - ARCJET_API_KEY: Your Arcjet API key
+ * - ARCJET_ENV: "production" or development environment name
+ */
 const arcjetKey = process.env.ARCJET_API_KEY;
 const arcjetEnv = process.env.ARCJET_ENV;
 const arcjetMode = arcjetEnv === "production" ? "LIVE" : "DRY_RUN";
-
-if (!arcjetKey) {
-  throw new Error("ARCJET_API_KEY is not set in .env file");
-}
-
-if (!arcjetEnv) {
-  throw new Error("ARCJET_ENV is not set in .env file");
-}
 export const httpArcjet = arcjetKey
   ? arcjet({
       apiKey: arcjetKey,
