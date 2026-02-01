@@ -1,4 +1,3 @@
-import { match } from "assert";
 import { Router } from "express";
 import {
   createMatchSchema,
@@ -31,9 +30,9 @@ matcheRoutes.get("/", async (req, res) => {
       data,
     });
   } catch (error) {
+    console.error("Error fetching matches:", error);
     return res.status(500).json({
       error: "failed to fetch matches",
-      details: JSON.stringify(error),
     });
   }
 });
