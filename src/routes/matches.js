@@ -57,9 +57,16 @@ matcheRoutes.post("/", async (req, res) => {
         status: getMatchStatus(parsed.data.startTime, parsed.data.endTime),
       })
       .returning();
-      if(res.app.locals.broadcastMatchCreated){
+
+    try {
+      if (res.app.locals.broadcastMatchCreated) {
         res.app.locals.broadcastMatchCreated(event);
       }
+    } catch (broadcastError) {
+      const logger = res.app.locals.logger || console;
+      logger.error("Error broadcasting match creation:", broadcastError);
+    }
+
     return res.status(201).json({
       data: event,
     });

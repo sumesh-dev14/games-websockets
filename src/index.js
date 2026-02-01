@@ -20,7 +20,7 @@ const { broadcastMatchCreated } = attachWebSocketServer(server);
 // Make the broadcast function available in routes via app locals
 app.locals.broadcastMatchCreated = broadcastMatchCreated;
 
-server.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-  console.log(`WebSocket running at ws://localhost:${PORT}/ws`);
+server.listen(PORT, HOST, () => {
+  console.log(`Server running at http://${HOST}:${PORT}`);
+  console.log(`WebSocket running at ws://${HOST}:${PORT}/ws`);
 });

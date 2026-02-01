@@ -22,14 +22,19 @@ export function attachWebSocketServer(server) {
     path: "/ws",
     maxPayload: 10 * 1024 * 1024, // 10 MB
   });
+
+  wss.on("error", (error) => {
+    console.error("WebSocket server error:", error);
+  });
+
   wss.on("connection", (socket, req) => {
     sendJSON(socket, {
       type: "welcome",
       message: "Welcome to the WebSocket server!",
     });
 
-    wss.on("error", (error) => {
-      console.error("WebSocket error:", error);
+    socket.on("error", (error) => {
+      console.error("WebSocket socket error:", error);
     });
   });
 
