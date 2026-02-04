@@ -8,9 +8,9 @@ import { matches } from "../db/schema.js";
 import { getMatchStatus } from "../utils/match-status.js";
 import { desc } from "drizzle-orm";
 
-export const matcheRoutes = Router();
+export const matchRoutes = Router();
 
-matcheRoutes.get("/", async (req, res) => {
+matchRoutes.get("/", async (req, res) => {
   const parse = listMatchesQuerySchema.safeParse(req.query);
   if (!parse.success) {
     return res.status(400).json({
@@ -36,7 +36,7 @@ matcheRoutes.get("/", async (req, res) => {
     });
   }
 });
-matcheRoutes.post("/", async (req, res) => {
+matchRoutes.post("/", async (req, res) => {
   const parsed = createMatchSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({
