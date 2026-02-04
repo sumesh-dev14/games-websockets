@@ -1,5 +1,34 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { webSocketArcjet } from "../arcjet.js";
+
+
+const matchSubscriptionClients = new Map(); // Map to hold clients subscribed to match updates
+
+function subscribe(matchId, socket) {
+  // Add the socket to the set of subscribers for the given matchId
+  if (!matchSubscriptionClients.has(matchId)) {
+    matchSubscriptionClients.set(matchId, new Set());
+  }
+  matchSubscriptionClients.get(matchId).add(socket);
+}
+
+function unsubscribe(matchId, socket) {
+  const subscribers = matchSubscriptionClients.get(matchId);
+  if (!subscribers) return;
+  subscribers.delete(socket);
+  if (subscribers.size == 0) {
+    matchSubscriptionClients.delete(matchId);
+  }
+}
+
+function cleanupSubscriptions(socket) {
+  for (const matchId of socket.subscriptions) {
+    unsubscribe(matchId, socket);
+  }
+}
+
+
+
 // Utility (helper) function to send JSON data over a WebSocket connection
 function sendJSON(ws, data) {
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
@@ -7,16 +36,52 @@ function sendJSON(ws, data) {
 }
 
 // send data to all connected clients
-function broadcastJSON(wss, data) {
+function broadcastToAll(wss, data) {
   if (!wss) return;
   for (const client of wss.clients) {
     sendJSON(client, data);
   }
 }
 
-// Function to attach a WebSocket server to an existing HTTP server
-// this function will receive the HTTP server instance created by express
-// and pass it to the WebSocket server so that it can handle WebSocket connections
+// sen data only to clients subscribed to a specific match
+function broadcastToMatchSubscribers(matchId, data) {
+  const subscribers = matchSubscriptionClients.get(matchId);
+  if (!subscribers || subscribers.size == 0) return;
+
+  const message = JSON.stringify(data);
+  for (const client of subscribers) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  }
+}
+
+
+
+// handling errors 
+
+function handleMessage(socket, data){
+  let message;
+  try {
+    message = JSON.parse(data.toString());
+  } catch (error) {
+    sendJSON(socket, {type: "error", message: "Invalid JSON format"});
+    return;
+  }
+  if (message?.type === "subscribe" && Number.isInteger(message.matchId)){
+    subscribe(message.matchId, socket);
+    socket.subscriptions.add(message.matchId);
+    sendJSON(socket, {type: "subscribed", matchId: message.matchId});
+    return;
+  }
+  if (message?.type === "unsubscribe" && Number.isInteger(message.matchId)){
+    unsubscribe(message.matchId, socket);
+    socket.subscriptions.delete(message.matchId);
+    sendJSON(socket, {type: "unsubscribed", matchId: message.matchId});
+    return;
+  }
+}
+
 export function attachWebSocketServer(server) {
   const wss = new WebSocketServer({
     server,
@@ -46,18 +111,32 @@ export function attachWebSocketServer(server) {
         return;
       }
     }
+    socket.subscriptions = new Set();
+
     sendJSON(socket, {
       type: "welcome",
       message: "Welcome to the WebSocket server!",
     });
 
+    socket.on("message", (data)=>{
+      handleMessage(socket, data);
+    });
+    socket.on("close", ()=>{
+      cleanupSubscriptions(socket);
+    });
+
     socket.on("error", (error) => {
       console.error("WebSocket socket error:", error);
+      socket.terminate();
     });
   });
 
   function broadcastMatchCreated(match) {
-    broadcastJSON(wss, { type: "match_created", match, data: match });
+    broadcastToAll(wss, { type: "match_created", match, data: match });
   }
-  return { broadcastMatchCreated };
+  function broadcastCommentary(matchId, updates){
+    broadcastToMatchSubscribers(matchId, {type: "commentary_update", matchId, updates});
+
+  }
+  return { broadcastMatchCreated, broadcastCommentary };
 }

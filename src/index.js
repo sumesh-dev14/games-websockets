@@ -1,6 +1,7 @@
 import http from "http";
 import express from "express";
-import { matcheRoutes } from "./routes/matches.js";
+import { matchRoutes } from "./routes/matches.js";
+import { commentaryRoutes } from "./routes/commentary.js";
 import { attachWebSocketServer } from "./websockets/server.js";
 import { securityMiddleware } from "./arcjet.js";
 
@@ -16,12 +17,15 @@ app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
-app.use("/matches", matcheRoutes);
+app.use("/matches", matchRoutes);
+app.use("/matches/:id/commentary", commentaryRoutes);
 
 // Attach WebSocket server to the existing HTTP server
-const { broadcastMatchCreated } = attachWebSocketServer(server);
-// Make the broadcast function available in routes via app locals
+const { broadcastMatchCreated, broadcastCommentary } = attachWebSocketServer(server);
+// Make the broadcast functions available in routes via app locals
 app.locals.broadcastMatchCreated = broadcastMatchCreated;
+app.locals.broadcastCommentary = broadcastCommentary;
+
 
 server.listen(PORT, HOST, () => {
   console.log(`Server running at http://${HOST}:${PORT}`);
